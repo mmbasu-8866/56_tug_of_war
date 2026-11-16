@@ -6,14 +6,14 @@ The runnable game is in the repository root (`main.py` and `game/`). The full so
 
 ## Videos
 
-- `videos/before.mp4` is the current baseline capture, recorded before code changes. Replace it with the student's own before video when provided.
-- `videos/after.mp4` is the after-change recording supplied by the student.
+- `videos/before.mp4` is the student's recording of the original game.
+- `videos/after.mp4` is the student's recording of the updated game.
 
-The baseline capture is the game's actual pre-change window; it is already at game over because the computer opponent wins quickly when no player input is made. Automated regression tests cover overlapping A/D input and verify the fix. Sudden Death and panic-surge behavior are covered by automated tests.
+The before recording shows the original static game before any changes. The after recording shows the updated game with its timer, tension meter, animated rope, and leaning pullers. Automated regression tests verify overlapping A/D input, panic surges, Sudden Death, and reset behavior.
 
 ## Chat record
 
-`Chat_History.pdf` and `Chat_History.docx` contain the Lab 4 prompt and visible progress summary. They link to the Copilot session; this is a readable record, not a raw export of hidden tool traffic.
+`Chat_History.pdf` and `Chat_History.docx` contain the Lab 4 prompt and visible progress summary, including that the student supplied both video recordings. They link to the Copilot session; this is a readable record, not a raw export of hidden tool traffic.
 
 ## Verification
 
