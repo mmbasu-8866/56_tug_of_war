@@ -80,3 +80,49 @@ def test_tension_and_puller_lean_are_bounded_and_renderable():
     assert 0 < rope.tension <= 1
     assert player.lean < 0
     assert -1 <= player.lean <= 1
+
+
+def test_sudden_death_starts_after_45_seconds_and_doubles_player_pull(monkeypatch):
+    engine = make_engine(monkeypatch, now=0)
+    engine.last_computer_pull = 45_001
+    monkeypatch.setattr(pygame.time, "get_ticks", lambda: 45_000)
+
+    engine.update()
+    start = engine.rope.marker_x
+    engine.handle_event(key_event(pygame.KEYDOWN, pygame.K_a))
+
+    assert engine.sudden_death
+    assert engine.match_elapsed_ms == engine.MATCH_DURATION_MS
+    assert engine.rope.marker_x == start - 2 * engine.rope.pull_step
+
+
+def test_sudden_death_doubles_computer_pull(monkeypatch):
+    engine = make_engine(monkeypatch, now=1_000)
+    engine.sudden_death = True
+    engine.last_computer_pull = 0
+    monkeypatch.setattr(game_engine.random, "uniform", lambda _low, _high: 1.0)
+
+    engine.update()
+
+    assert engine.rope.marker_x == 400 + 2 * engine.rope.pull_step
+
+
+def test_reset_clears_input_match_and_animation_state(monkeypatch):
+    engine = make_engine(monkeypatch, now=100)
+    engine.held_keys.add(pygame.K_a)
+    engine.last_key = pygame.K_a
+    engine.sudden_death = True
+    engine.panic_mode = True
+    engine.rope.pull_left()
+    monkeypatch.setattr(pygame.time, "get_ticks", lambda: 500)
+
+    engine.reset()
+
+    assert engine.rope.marker_x == 400
+    assert engine.rope.tension == 0
+    assert engine.held_keys == set()
+    assert engine.last_key is None
+    assert not engine.sudden_death
+    assert not engine.panic_mode
+    assert engine.match_start_time == 500
+    assert engine.match_elapsed_ms == 0

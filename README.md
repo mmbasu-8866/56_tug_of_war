@@ -3,20 +3,13 @@
 This project is a competitive tug-of-war game using **Pygame**. It introduces students to alternating keyboard input synchronization, debounce and lock state patterns, physics-based tension balancing, and autonomous AI pulling mechanics within an object-oriented codebase.
 ---
 
-## What's Provided
+## Features
 
-A working Tug of War game with:
-
-- A horizontal rope setup with goal markers, center boundary indicators, and a center position flag
-- Two anchor pullers (`PLAYER` and `COMPUTER`) rendered with visual team colorings
-- An alternating key input model requiring players to alternate `A` and `D` to pull left
-- An autonomous computer opponent that pulls the rope rightward at recurring intervals
-- Win-state boundary detection and a Game Over overlay with rematch support
-
-It has **one deliberate bug** and **three optional features** left as tasks to implement. You are expected to **analyze**, **interact with an AI assistant**, and **complete/fix** the game to make it fully functional and more interesting.
-
-### **Use an LLM (e.g. ChatGPT or Claude) as your debugging and pair-programming partner for this lab.**
----
+- Players pull left by alternating `A` and `D`; overlapping key-down events are handled independently, and key-repeat events do not create duplicate pulls.
+- The computer pulls right on a timed cadence and enters a faster, stronger panic surge when the marker nears the player's goal.
+- Rope sag/vibration, a tension meter, and puller leaning respond to the marker's displacement and pulling activity.
+- A live match timer triggers Sudden Death after 45 seconds. Both player and computer pulls then have double strength.
+- Boundary detection, the game-over overlay, and `R` to restart remain supported; restarting clears input state and resets the match timer.
 
 ## Getting Started
 
@@ -35,28 +28,21 @@ pip install pygame
 python main.py
 ```
 
-**Controls:** Left-click on the HIGHER or LOWER buttons to predict the next card.   
+**Controls:** Alternate `A` and `D` to pull the rope left. Press `R` after game over to start a new match.
 
 
-## Tasks to Complete
+## Lab Tasks Implemented
 
-Each task must be completed using an iterative process involving LLM suggestions and your critical code review.
+1. Reworked alternating input so overlapping `A`/`D` presses do not deadlock.
+2. Added an adaptive computer panic surge near the player's winning boundary.
+3. Added tension-based rope motion and responsive puller leaning.
+4. Added a 45-second match timer and double-strength Sudden Death.
 
-### Task 1: Fix the Alternating Input Deadlock Bug
+Run the unit tests with:
 
-Rapidly mashing back and forth between A and D suddenly freezes input handling completely, leaving the rope unresponsive while the computer effortlessly pulls away with the win. Redesign the input synchronization so that overlapping or rapid alternating keystrokes consistently register pulls without locking the player out.
-
-### Task 2: Implement Dynamic AI Panic Surges
-
-The computer currently pulls at a fixed cadence with minimal variation. Introduce dynamic difficulty: as the center marker gets pulled closer to the player's winning threshold, have the computer enter a high-intensity panic surge with faster reaction intervals and aggressive pulling strength to stage a comeback.
-
-### Task 3: Implement Rope Tension & Puller Leaning Animations
-
-The rope and pullers are currently visually static. Add dynamic visual feedback: give the rope a vibrating high-tension hum or sag depending on struggle intensity, and animate both characters with backward leaning postures based on which side holds pulling momentum.
-
-### Task 4: Implement a match timer and sudden death mode
-
-Matches between evenly matched opponents can drag on indefinitely. Add a live match timer at the top of the screen. If no side has won within 45 seconds, trigger a "Sudden Death" state that doubles pulling power across all actions to force a swift finish.
+```bash
+python -m pytest
+```
 
 ---
 
@@ -81,11 +67,3 @@ tug_of_war/
 ```
 
 ---
-
-## Submission Checklist
-
-Submission is only the following three things:
-
-- [] A 10-second video of gameplay **before** your changes, showing the bug/broken behavior
-- [] A 10-second video of gameplay **after** your changes, showing the bug fixed and the new features working
-- [] The Chat/LLM used page link, with the complete chat history

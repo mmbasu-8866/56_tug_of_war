@@ -10,6 +10,8 @@ class GameEngine:
     NORMAL_PULL_INTERVAL_MS = 180
     PANIC_PULL_INTERVAL_MS = 60
     PANIC_DISTANCE_RATIO = 0.35
+    MATCH_DURATION_MS = 45_000
+    SUDDEN_DEATH_MULTIPLIER = 2.0
 
     def __init__(self, width, height):
         self.width = width
@@ -23,11 +25,14 @@ class GameEngine:
         self.winner = None
         self.game_state = "PLAYING"
         self.panic_mode = False
+        self.sudden_death = False
 
         self.computer_pull_cooldown = self.NORMAL_PULL_INTERVAL_MS
         now = pygame.time.get_ticks()
         self.last_computer_pull = now
         self.last_update_time = now
+        self.match_start_time = now
+        self.match_elapsed_ms = 0
 
         self.font_big = pygame.font.SysFont(None, 48)
         self.font_small = pygame.font.SysFont(None, 26)
@@ -50,7 +55,8 @@ class GameEngine:
 
         self.held_keys.add(event.key)
         if event.key != self.last_key:
-            self.rope.pull_left(1.0)
+            strength = self.SUDDEN_DEATH_MULTIPLIER if self.sudden_death else 1.0
+            self.rope.pull_left(strength)
             self.last_key = event.key
 
     def update(self):
@@ -60,6 +66,10 @@ class GameEngine:
         now = pygame.time.get_ticks()
         delta_ms = max(0, now - self.last_update_time)
         self.last_update_time = now
+        self.match_elapsed_ms = max(0, now - self.match_start_time)
+        if self.match_elapsed_ms >= self.MATCH_DURATION_MS:
+            self.sudden_death = True
+
         center_x = self.width // 2
         player_range = max(1, center_x - self.rope.left_win_x)
         player_progress = (center_x - self.rope.marker_x) / player_range
@@ -87,6 +97,8 @@ class GameEngine:
                 computer_strength = random.uniform(1.8, 2.4)
             else:
                 computer_strength = random.uniform(0.7, 1.2)
+            if self.sudden_death:
+                computer_strength *= self.SUDDEN_DEATH_MULTIPLIER
             self.rope.pull_right(computer_strength)
             self.last_computer_pull = now
 
@@ -104,9 +116,21 @@ class GameEngine:
         now = pygame.time.get_ticks()
         self.last_computer_pull = now
         self.last_update_time = now
+        self.match_start_time = now
+        self.match_elapsed_ms = 0
+        self.sudden_death = False
+        self.panic_mode = False
 
     def render(self, screen):
         screen.fill((30, 32, 36))
+
+        timer_text = (
+            f"TIME {self.match_elapsed_ms // 60_000:02d}:"
+            f"{(self.match_elapsed_ms // 1000) % 60:02d}"
+        )
+        timer_color = (255, 205, 90) if self.sudden_death else (225, 225, 225)
+        timer_surface = self.font_small.render(timer_text, True, timer_color)
+        screen.blit(timer_surface, (self.width // 2 - timer_surface.get_width() // 2, 8))
 
         mud_rect = pygame.Rect(self.width // 2 - 120, self.height // 2 - 80, 240, 160)
         pygame.draw.rect(screen, (45, 38, 30), mud_rect, border_radius=12)
@@ -139,6 +163,15 @@ class GameEngine:
             screen.blit(
                 panic_surface,
                 (self.width // 2 - panic_surface.get_width() // 2, 72),
+            )
+
+        if self.sudden_death and self.game_state == "PLAYING":
+            sudden_surface = self.font_small.render(
+                "SUDDEN DEATH - DOUBLE PULL POWER", True, (255, 205, 90)
+            )
+            screen.blit(
+                sudden_surface,
+                (self.width // 2 - sudden_surface.get_width() // 2, 100),
             )
 
         if self.game_state == "GAME_OVER":
