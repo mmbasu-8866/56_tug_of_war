@@ -1,5 +1,7 @@
 import random
+
 import pygame
+
 from game.rope import Rope
 from game.player import Puller
 
@@ -13,7 +15,7 @@ class GameEngine:
         self.computer = Puller(width - 90, height // 2, (220, 80, 50), "COMPUTER")
 
         self.last_key = None
-        self.is_pull_locked = False
+        self.held_keys = set()
         self.winner = None
         self.game_state = "PLAYING"
 
@@ -24,22 +26,26 @@ class GameEngine:
         self.font_small = pygame.font.SysFont(None, 26)
 
     def handle_event(self, event):
+        if event.type == pygame.KEYUP:
+            self.held_keys.discard(event.key)
+            return
+
+        if event.type != pygame.KEYDOWN:
+            return
+
         if self.game_state != "PLAYING":
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_r:
+            if event.key == pygame.K_r:
                 self.reset()
             return
 
-        if event.type == pygame.KEYDOWN:
-            if event.key in (pygame.K_a, pygame.K_d):
-                if not self.is_pull_locked:
-                    if event.key != self.last_key:
-                        self.rope.pull_left(1.0)
-                        self.last_key = event.key
-                        self.is_pull_locked = True
-        elif event.type == pygame.KEYUP:
-            if event.key == self.last_key:
-                self.is_pull_locked = False
-        
+        if event.key not in (pygame.K_a, pygame.K_d) or event.key in self.held_keys:
+            return
+
+        self.held_keys.add(event.key)
+        if event.key != self.last_key:
+            self.rope.pull_left(1.0)
+            self.last_key = event.key
+
     def update(self):
         if self.game_state != "PLAYING":
             return
@@ -58,7 +64,7 @@ class GameEngine:
     def reset(self):
         self.rope.reset()
         self.last_key = None
-        self.is_pull_locked = False
+        self.held_keys.clear()
         self.winner = None
         self.game_state = "PLAYING"
         self.last_computer_pull = pygame.time.get_ticks()
@@ -88,7 +94,7 @@ class GameEngine:
             text_surf = self.font_big.render(win_text, True, color)
             screen.blit(
                 text_surf,
-                (self.width // 2 - text_surf.get_width() // 2, self.height // 2 - 50)
+                (self.width // 2 - text_surf.get_width() // 2, self.height // 2 - 50),
             )
 
             restart_surf = self.font_small.render(
@@ -96,5 +102,5 @@ class GameEngine:
             )
             screen.blit(
                 restart_surf,
-                (self.width // 2 - restart_surf.get_width() // 2, self.height // 2 + 10)
+                (self.width // 2 - restart_surf.get_width() // 2, self.height // 2 + 10),
             )
