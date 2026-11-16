@@ -1,3 +1,5 @@
+import math
+
 import pygame
 
 
@@ -11,12 +13,23 @@ class Rope:
         self.left_win_x = 180
         self.right_win_x = screen_width - 180
         self.pull_step = 12
+        self.tension = 0.0
+        self.last_pull_direction = 0
 
     def pull_left(self, strength=1.0):
         self.marker_x -= int(self.pull_step * strength)
+        self.last_pull_direction = -1
+        self.tension = min(1.0, self.tension + 0.12 * abs(strength))
 
     def pull_right(self, strength=1.0):
         self.marker_x += int(self.pull_step * strength)
+        self.last_pull_direction = 1
+        self.tension = min(1.0, self.tension + 0.12 * abs(strength))
+
+    def update_tension(self, delta_seconds, displacement_ratio):
+        target = min(1.0, max(0.0, displacement_ratio))
+        blend = min(1.0, max(0.0, delta_seconds) * 4.0)
+        self.tension += (target - self.tension) * blend
 
     def check_winner(self):
         if self.marker_x <= self.left_win_x:
@@ -27,15 +40,33 @@ class Rope:
 
     def reset(self):
         self.marker_x = float(self.screen_width // 2)
-        self.velocity = 0.0
+        self.tension = 0.0
+        self.last_pull_direction = 0
 
-    def render(self, surface):
-        pygame.draw.line(
+    def render(self, surface, now_ms=None):
+        if now_ms is None:
+            now_ms = pygame.time.get_ticks()
+
+        start_x = 60
+        end_x = self.screen_width - 60
+        segments = max(1, (end_x - start_x) // 20)
+        vibration = self.tension * 3.5
+        sag = self.tension * 10
+        points = []
+        for index in range(segments + 1):
+            ratio = index / segments
+            x = start_x + (end_x - start_x) * ratio
+            curve = 4 * ratio * (1 - ratio)
+            y = self.center_y + sag * curve
+            y += math.sin(now_ms * 0.025 + ratio * 35) * vibration
+            points.append((round(x), round(y)))
+
+        pygame.draw.lines(
             surface,
             (180, 140, 90),
-            (60, self.center_y),
-            (self.screen_width - 60, self.center_y),
-            10
+            False,
+            points,
+            10,
         )
 
         pygame.draw.line(
@@ -43,14 +74,14 @@ class Rope:
             (50, 200, 50),
             (self.left_win_x, self.center_y - 40),
             (self.left_win_x, self.center_y + 40),
-            4
+            4,
         )
         pygame.draw.line(
             surface,
             (200, 50, 50),
             (self.right_win_x, self.center_y - 40),
             (self.right_win_x, self.center_y + 40),
-            4
+            4,
         )
 
         pygame.draw.line(
@@ -58,7 +89,7 @@ class Rope:
             (120, 120, 120),
             (self.screen_width // 2, self.center_y - 20),
             (self.screen_width // 2, self.center_y + 20),
-            2
+            2,
         )
 
         flag_rect = pygame.Rect(int(self.marker_x) - 12, self.center_y - 24, 24, 48)

@@ -25,7 +25,9 @@ class GameEngine:
         self.panic_mode = False
 
         self.computer_pull_cooldown = self.NORMAL_PULL_INTERVAL_MS
-        self.last_computer_pull = pygame.time.get_ticks()
+        now = pygame.time.get_ticks()
+        self.last_computer_pull = now
+        self.last_update_time = now
 
         self.font_big = pygame.font.SysFont(None, 48)
         self.font_small = pygame.font.SysFont(None, 26)
@@ -56,8 +58,16 @@ class GameEngine:
             return
 
         now = pygame.time.get_ticks()
+        delta_ms = max(0, now - self.last_update_time)
+        self.last_update_time = now
         center_x = self.width // 2
         player_range = max(1, center_x - self.rope.left_win_x)
+        player_progress = (center_x - self.rope.marker_x) / player_range
+        player_progress = max(-1.0, min(1.0, player_progress))
+        self.rope.update_tension(delta_ms / 1000, abs(player_progress))
+        self.player.update(delta_ms / 1000, -player_progress)
+        self.computer.update(delta_ms / 1000, player_progress)
+
         distance_to_player_goal = self.rope.marker_x - self.rope.left_win_x
         self.panic_mode = (
             distance_to_player_goal <= player_range * self.PANIC_DISTANCE_RATIO
@@ -65,6 +75,12 @@ class GameEngine:
         self.computer_pull_cooldown = (
             self.PANIC_PULL_INTERVAL_MS if self.panic_mode else self.NORMAL_PULL_INTERVAL_MS
         )
+
+        result = self.rope.check_winner()
+        if result:
+            self.winner = result
+            self.game_state = "GAME_OVER"
+            return
 
         if now - self.last_computer_pull >= self.computer_pull_cooldown:
             if self.panic_mode:
@@ -85,7 +101,9 @@ class GameEngine:
         self.held_keys.clear()
         self.winner = None
         self.game_state = "PLAYING"
-        self.last_computer_pull = pygame.time.get_ticks()
+        now = pygame.time.get_ticks()
+        self.last_computer_pull = now
+        self.last_update_time = now
 
     def render(self, screen):
         screen.fill((30, 32, 36))
@@ -93,7 +111,8 @@ class GameEngine:
         mud_rect = pygame.Rect(self.width // 2 - 120, self.height // 2 - 80, 240, 160)
         pygame.draw.rect(screen, (45, 38, 30), mud_rect, border_radius=12)
 
-        self.rope.render(screen)
+        now = pygame.time.get_ticks()
+        self.rope.render(screen, now)
         self.player.render(screen)
         self.computer.render(screen)
 
@@ -101,6 +120,17 @@ class GameEngine:
             "Alternate [A] and [D] keys rapidly to pull!", True, (210, 210, 210)
         )
         screen.blit(inst_surf, (self.width // 2 - inst_surf.get_width() // 2, 40))
+
+        tension_width = int(120 * self.rope.tension)
+        pygame.draw.rect(screen, (80, 80, 80), (self.width - 150, 16, 120, 12), border_radius=6)
+        pygame.draw.rect(
+            screen,
+            (235, 155, 65),
+            (self.width - 150, 16, tension_width, 12),
+            border_radius=6,
+        )
+        tension_label = self.font_small.render("TENSION", True, (210, 210, 210))
+        screen.blit(tension_label, (self.width - 150, 32))
 
         if self.panic_mode and self.game_state == "PLAYING":
             panic_surface = self.font_small.render(

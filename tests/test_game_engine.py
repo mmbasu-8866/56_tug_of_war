@@ -8,6 +8,8 @@ import pytest
 
 import game.game_engine as game_engine
 from game.game_engine import GameEngine
+from game.player import Puller
+from game.rope import Rope
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -61,3 +63,20 @@ def test_panic_surge_uses_faster_cadence_and_stronger_pull(monkeypatch):
     assert engine.panic_mode
     assert engine.computer_pull_cooldown == engine.PANIC_PULL_INTERVAL_MS
     assert engine.rope.marker_x == 274
+
+
+def test_tension_and_puller_lean_are_bounded_and_renderable():
+    pygame.display.set_mode((800, 450))
+    surface = pygame.Surface((800, 450))
+    rope = Rope(800, 450)
+    player = Puller(90, 225, (50, 120, 220), "PLAYER")
+
+    rope.pull_left(2)
+    rope.update_tension(0.1, 0.8)
+    player.update(0.1, -1.0)
+    rope.render(surface, now_ms=100)
+    player.render(surface)
+
+    assert 0 < rope.tension <= 1
+    assert player.lean < 0
+    assert -1 <= player.lean <= 1
