@@ -6,6 +6,7 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 import pygame
 import pytest
 
+import game.game_engine as game_engine
 from game.game_engine import GameEngine
 
 
@@ -47,3 +48,16 @@ def test_held_key_repeat_does_not_create_duplicate_pulls(monkeypatch):
     engine.handle_event(key_event(pygame.KEYDOWN, pygame.K_a))
 
     assert engine.rope.marker_x == start - engine.rope.pull_step
+
+
+def test_panic_surge_uses_faster_cadence_and_stronger_pull(monkeypatch):
+    engine = make_engine(monkeypatch, now=1_000)
+    engine.rope.marker_x = 250
+    engine.last_computer_pull = 0
+    monkeypatch.setattr(game_engine.random, "uniform", lambda _low, _high: 2.0)
+
+    engine.update()
+
+    assert engine.panic_mode
+    assert engine.computer_pull_cooldown == engine.PANIC_PULL_INTERVAL_MS
+    assert engine.rope.marker_x == 274

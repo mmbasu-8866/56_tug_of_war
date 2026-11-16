@@ -7,6 +7,10 @@ from game.player import Puller
 
 
 class GameEngine:
+    NORMAL_PULL_INTERVAL_MS = 180
+    PANIC_PULL_INTERVAL_MS = 60
+    PANIC_DISTANCE_RATIO = 0.35
+
     def __init__(self, width, height):
         self.width = width
         self.height = height
@@ -18,8 +22,9 @@ class GameEngine:
         self.held_keys = set()
         self.winner = None
         self.game_state = "PLAYING"
+        self.panic_mode = False
 
-        self.computer_pull_cooldown = 180
+        self.computer_pull_cooldown = self.NORMAL_PULL_INTERVAL_MS
         self.last_computer_pull = pygame.time.get_ticks()
 
         self.font_big = pygame.font.SysFont(None, 48)
@@ -51,9 +56,22 @@ class GameEngine:
             return
 
         now = pygame.time.get_ticks()
+        center_x = self.width // 2
+        player_range = max(1, center_x - self.rope.left_win_x)
+        distance_to_player_goal = self.rope.marker_x - self.rope.left_win_x
+        self.panic_mode = (
+            distance_to_player_goal <= player_range * self.PANIC_DISTANCE_RATIO
+        )
+        self.computer_pull_cooldown = (
+            self.PANIC_PULL_INTERVAL_MS if self.panic_mode else self.NORMAL_PULL_INTERVAL_MS
+        )
+
         if now - self.last_computer_pull >= self.computer_pull_cooldown:
-            computer_variance = random.uniform(0.7, 1.2)
-            self.rope.pull_right(computer_variance)
+            if self.panic_mode:
+                computer_strength = random.uniform(1.8, 2.4)
+            else:
+                computer_strength = random.uniform(0.7, 1.2)
+            self.rope.pull_right(computer_strength)
             self.last_computer_pull = now
 
         result = self.rope.check_winner()
@@ -83,6 +101,15 @@ class GameEngine:
             "Alternate [A] and [D] keys rapidly to pull!", True, (210, 210, 210)
         )
         screen.blit(inst_surf, (self.width // 2 - inst_surf.get_width() // 2, 40))
+
+        if self.panic_mode and self.game_state == "PLAYING":
+            panic_surface = self.font_small.render(
+                "COMPUTER PANIC SURGE!", True, (255, 115, 80)
+            )
+            screen.blit(
+                panic_surface,
+                (self.width // 2 - panic_surface.get_width() // 2, 72),
+            )
 
         if self.game_state == "GAME_OVER":
             overlay = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
